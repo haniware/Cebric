@@ -20,14 +20,16 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY pyproject.toml ./
 
-# Install Node.js dependencies
-RUN npm ci --only=production && \
+# Install ALL Node.js dependencies (including dev dependencies for building)
+RUN npm ci && \
     npm cache clean --force
 
 # Install Python dependencies
-RUN pip3 install --no-cache-dir --break-system-packages -r <(grep -E "^\w+" pyproject.toml | sed 's/.*"\(.*\)".*/\1/' || echo "fastf1>=3.6.1" "numpy>=2.3.3" "pandas>=2.3.3")
+RUN pip3 install --no-cache-dir --break-system-packages \
+    fastf1>=3.6.1 \
+    numpy>=2.3.3 \
+    pandas>=2.3.3
 
 # Copy application source code
 COPY . .
@@ -48,7 +50,6 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY pyproject.toml ./
 
 # Install only production Node.js dependencies
 RUN npm ci --only=production && \
@@ -67,6 +68,12 @@ COPY --from=builder /app/python ./python
 COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/server ./server
 
+# Copy node_modules from builder to ensure all dependencies are available
+COPY --from=builder /app/node_modules ./node_modules
+
+# Create symlink for python directory at root (if app expects /python path)
+RUN ln -s /app/python /python
+
 # Create cache directory for FastF1
 RUN mkdir -p /app/fastf1_cache && \
     chmod 777 /app/fastf1_cache
@@ -83,5 +90,5 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD node -e "require('http').get('http://localhost:5000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
 
-# Start the application
+# Start the application directly (bypass npm script)
 CMD ["npm", "start"]
