@@ -40,10 +40,17 @@ RUN npm run build
 # Stage 2: Production image
 FROM node:20-alpine
 
-# Install Python runtime and dependencies
+# Install Python runtime AND build dependencies (needed for ARM64 matplotlib compilation)
 RUN apk add --no-cache \
     python3 \
-    py3-pip
+    py3-pip \
+    python3-dev \
+    build-base \
+    gcc \
+    g++ \
+    musl-dev \
+    linux-headers \
+    libffi-dev
 
 # Set working directory
 WORKDIR /app
@@ -55,7 +62,7 @@ COPY package*.json ./
 RUN npm ci --only=production && \
     npm cache clean --force
 
-# Install Python dependencies
+# Install Python dependencies (will compile on ARM64)
 RUN pip3 install --no-cache-dir --break-system-packages \
     fastf1>=3.6.1 \
     numpy>=2.3.3 \
