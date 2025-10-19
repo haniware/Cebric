@@ -20,12 +20,23 @@ env:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     # Build if: manual trigger OR commit has "build docker" OR push to main
     if: |
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.head_commit.message, 'build docker') ||
       github.ref == 'refs/heads/main'
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            arch: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            arch: arm64
     
     permissions:
       contents: read
@@ -41,15 +52,8 @@ jobs:
         run: |
           echo "name=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-        
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: |
-            image=moby/buildkit:latest
-            network=host
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -62,36 +66,91 @@ jobs:
         id: timestamp
         run: echo "tag=$(date +'%Y-%m-%d.%H-%M')" >> $GITHUB_OUTPUT
 
-      - name: Build and push Cebric Docker image
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ steps.timestamp.outputs.tag }}
+
+      - name: Build and push by digest
         id: build
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest
-            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.timestamp.outputs.tag }}
-          labels: |
-            org.opencontainers.image.title=Cebric F1 Data Application
-            org.opencontainers.image.description=F1 data analysis application with FastF1
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.created=${{ steps.timestamp.outputs.tag }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ steps.image.outputs.name }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=build-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=build-${{ matrix.arch }}
 
-      - name: Generate artifact attestation
-        if: github.event_name != 'pull_request'
-        uses: actions/attest-build-provenance@v1
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}
-          subject-digest: ${{ steps.build.outputs.digest }}
-          push-to-registry: true
+          name: digests-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge-and-push:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name != 'pull_request'
+    
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Generate lowercase image name
+        id: image
+        run: |
+          echo "name=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate timestamp tag
+        id: timestamp
+        run: echo "tag=$(date +'%Y-%m-%d.%H-%M')" >> $GITHUB_OUTPUT
+
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            -t ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest \
+            -t ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.timestamp.outputs.tag }} \
+            $(printf '${{ env.REGISTRY }}/${{ steps.image.outputs.name }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest
 
       - name: Output Cebric image details
-        if: github.event_name != 'pull_request'
         run: |
           echo "### 🏎️ Cebric F1 Data Application Image Published! 🐳" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -102,13 +161,11 @@ jobs:
           echo "- \`latest\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ steps.timestamp.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Architectures:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Pull command:**" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "# Pull latest" >> $GITHUB_STEP_SUMMARY
           echo "docker pull ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "# Pull specific version" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.timestamp.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Run command:**" >> $GITHUB_STEP_SUMMARY
@@ -119,18 +176,10 @@ jobs:
           echo "  --name cebric \\" >> $GITHUB_STEP_SUMMARY
           echo "  ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Health Check:**" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "curl http://localhost:5000/api/health" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
 
   security-scan:
     runs-on: ubuntu-latest
-    needs: build-and-push
-    if: github.event_name != 'pull_request'
+    needs: merge-and-push
     
     permissions:
       contents: read
