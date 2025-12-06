@@ -495,14 +495,14 @@ export default function TelemetrySection({
                       <span className="font-semibold" style={{ color: driver1Color }}>
                         {telemetryData.driver1.driver}:
                       </span>{" "}
-                      {telemetryData.driver1.metrics.drs.toFixed(1)}%
+                      {telemetryData.driver1.metrics.drsUsage.toFixed(1)}%
                     </div>
                     {telemetryData.driver2 && (
                       <div>
                         <span className="font-semibold" style={{ color: driver2Color }}>
                           {telemetryData.driver2.driver}:
                         </span>{" "}
-                        {telemetryData.driver2.metrics.drs.toFixed(1)}%
+                        {telemetryData.driver2.metrics.drsUsage.toFixed(1)}%
                       </div>
                     )}
                   </div>
