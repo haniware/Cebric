@@ -260,6 +260,7 @@ export default function AdvancedAnalysis({ sessionData, filters }: AdvancedAnaly
                       <Legend />
                       <Bar dataKey="bestLap" fill="#00d9ff" name="Best Lap" />
                       <Bar dataKey="avgLap" fill="#ff3853" name="Avg Lap" />
+                      <text x="50%" y="95%" textAnchor="middle" fill="#00d9ff" opacity="0.15" fontSize="20" fontWeight="bold">CEBRIC F1</text>
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -452,38 +453,76 @@ export default function AdvancedAnalysis({ sessionData, filters }: AdvancedAnaly
                 {analysisType === 'tire' && analysisData && analysisData.compound && (
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <Card>
+                      <Card className="border-l-4 border-l-primary">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">Tire Compound</CardTitle>
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <i className="fas fa-tire text-primary"></i>
+                            Tire Compound
+                          </CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <div className="text-3xl font-bold text-primary">{analysisData.compound || 'N/A'}</div>
+                          <div className={`text-3xl font-bold ${
+                            analysisData.compound === 'SOFT' ? 'text-red-500' :
+                            analysisData.compound === 'MEDIUM' ? 'text-yellow-500' :
+                            analysisData.compound === 'HARD' ? 'text-gray-300' :
+                            'text-primary'
+                          }`}>
+                            {analysisData.compound || 'N/A'}
+                          </div>
                           <p className="text-xs text-muted-foreground mt-1">Current compound</p>
                         </CardContent>
                       </Card>
-                      <Card>
+                      <Card className="border-l-4 border-l-secondary">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">Tire Age</CardTitle>
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <i className="fas fa-clock text-secondary"></i>
+                            Tire Age
+                          </CardTitle>
                         </CardHeader>
                         <CardContent>
                           <div className="text-3xl font-bold text-secondary">{analysisData.tireAge || 0} laps</div>
                           <p className="text-xs text-muted-foreground mt-1">Laps on this set</p>
+                          <div className="mt-2 w-full bg-muted rounded-full h-2">
+                            <div 
+                              className="bg-secondary h-2 rounded-full transition-all"
+                              style={{ width: `${Math.min((analysisData.tireAge / 30) * 100, 100)}%` }}
+                            ></div>
+                          </div>
                         </CardContent>
                       </Card>
-                      <Card>
+                      <Card className="border-l-4 border-l-accent">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">Degradation Rate</CardTitle>
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <i className="fas fa-chart-line text-accent"></i>
+                            Degradation Rate
+                          </CardTitle>
                         </CardHeader>
                         <CardContent>
                           <div className="text-3xl font-bold text-accent">
                             {(analysisData.degradationRate || 0) > 0 ? '+' : ''}{(analysisData.degradationRate || 0).toFixed(3)}s/lap
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">Time loss per lap</p>
+                          <p className="text-xs text-accent-foreground mt-1">
+                            {Math.abs(analysisData.degradationRate || 0) < 0.05 ? 'Minimal degradation' :
+                             Math.abs(analysisData.degradationRate || 0) < 0.15 ? 'Moderate degradation' :
+                             'High degradation'}
+                          </p>
                         </CardContent>
                       </Card>
-                      <Card>
+                      <Card className={`border-l-4 ${
+                        analysisData.performance === 'optimal' ? 'border-l-green-500' :
+                        analysisData.performance === 'degraded' ? 'border-l-yellow-500' :
+                        'border-l-red-500'
+                      }`}>
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">Performance Status</CardTitle>
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <i className={`fas fa-circle ${
+                              analysisData.performance === 'optimal' ? 'text-green-500' :
+                              analysisData.performance === 'degraded' ? 'text-yellow-500' :
+                              'text-red-500'
+                            }`}></i>
+                            Performance Status
+                          </CardTitle>
                         </CardHeader>
                         <CardContent>
                           <div className={`text-2xl font-bold ${
@@ -501,7 +540,10 @@ export default function AdvancedAnalysis({ sessionData, filters }: AdvancedAnaly
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <Card>
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">Average Speed</CardTitle>
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <i className="fas fa-tachometer-alt"></i>
+                            Average Speed
+                          </CardTitle>
                         </CardHeader>
                         <CardContent>
                           <div className="text-2xl font-bold">{(analysisData.avgSpeed || 0).toFixed(1)} km/h</div>
@@ -510,16 +552,34 @@ export default function AdvancedAnalysis({ sessionData, filters }: AdvancedAnaly
                       </Card>
                       <Card>
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">Estimated Life Remaining</CardTitle>
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <i className="fas fa-hourglass-half text-primary"></i>
+                            Est. Life Remaining
+                          </CardTitle>
                         </CardHeader>
                         <CardContent>
                           <div className="text-2xl font-bold text-primary">{analysisData.estimatedLifeRemaining || 0} laps</div>
                           <p className="text-xs text-muted-foreground mt-1">Before critical wear</p>
+                          <div className="mt-2 flex items-center gap-1 text-xs">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <div 
+                                key={i} 
+                                className={`h-2 flex-1 rounded ${
+                                  i < Math.ceil((analysisData.estimatedLifeRemaining / 10) * 5) 
+                                    ? 'bg-primary' 
+                                    : 'bg-muted'
+                                }`}
+                              ></div>
+                            ))}
+                          </div>
                         </CardContent>
                       </Card>
                       <Card>
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">Temperature Impact</CardTitle>
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <i className="fas fa-temperature-high text-orange-500"></i>
+                            Temperature Impact
+                          </CardTitle>
                         </CardHeader>
                         <CardContent>
                           <div className="text-2xl font-bold text-orange-500">{(analysisData.tempImpact || 0).toFixed(1)}%</div>
@@ -528,45 +588,154 @@ export default function AdvancedAnalysis({ sessionData, filters }: AdvancedAnaly
                       </Card>
                       <Card>
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">Wear Level</CardTitle>
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <i className="fas fa-exclamation-triangle text-yellow-500"></i>
+                            Wear Level
+                          </CardTitle>
                         </CardHeader>
                         <CardContent>
                           <div className="text-2xl font-bold text-yellow-500">{(analysisData.wearLevel || 0).toFixed(1)}%</div>
                           <p className="text-xs text-muted-foreground mt-1">Current tire wear</p>
+                          <div className="mt-2 w-full bg-muted rounded-full h-2.5 overflow-hidden">
+                            <div 
+                              className={`h-2.5 rounded-full transition-all ${
+                                (analysisData.wearLevel || 0) < 30 ? 'bg-green-500' :
+                                (analysisData.wearLevel || 0) < 60 ? 'bg-yellow-500' :
+                                'bg-red-500'
+                              }`}
+                              style={{ width: `${Math.min(analysisData.wearLevel || 0, 100)}%` }}
+                            ></div>
+                          </div>
                         </CardContent>
                       </Card>
                     </div>
 
+                    {/* Tire Wear Progression Chart */}
+                    <Card className="bg-gradient-to-br from-red-500/5 via-yellow-500/5 to-gray-500/5">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <i className="fas fa-chart-area text-primary"></i>
+                          Tire Wear Progression
+                        </CardTitle>
+                        <CardDescription>Estimated wear development over tire life</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <ResponsiveContainer width="100%" height={250}>
+                          <LineChart data={(() => {
+                            const maxLife = 40;
+                            const currentAge = analysisData.tireAge || 0;
+                            const degradationRate = analysisData.degradationRate || 0;
+                            return Array.from({ length: maxLife + 1 }, (_, i) => ({
+                              lap: i,
+                              wear: Math.min(100, (i / maxLife) * 100 + (degradationRate * i * 50)),
+                              performance: Math.max(0, 100 - ((i / maxLife) * 100 + (degradationRate * i * 50))),
+                              current: i === currentAge
+                            }));
+                          })()}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="lap" label={{ value: 'Lap on Tire', position: 'insideBottom', offset: -5 }} />
+                            <YAxis label={{ value: 'Percentage (%)', angle: -90, position: 'insideLeft' }} />
+                            <Tooltip formatter={(value) => `${Number(value).toFixed(1)}%`} />
+                            <Legend />
+                            <Line type="monotone" dataKey="wear" stroke="#ef4444" strokeWidth={2} name="Tire Wear" dot={false} />
+                            <Line type="monotone" dataKey="performance" stroke="#22c55e" strokeWidth={2} name="Performance" dot={false} />
+                            <ReferenceLine x={analysisData.tireAge} stroke="#00d9ff" strokeDasharray="3 3" label="Current" />
+                            <text x="50%" y="95%" textAnchor="middle" fill="#00d9ff" opacity="0.15" fontSize="20" fontWeight="bold">CEBRIC F1</text>
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+
                     <Card className="bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/20">
                       <CardHeader>
-                        <CardTitle>Tire Performance Analysis</CardTitle>
-                        <CardDescription>Detailed tire degradation metrics</CardDescription>
+                        <CardTitle className="flex items-center gap-2">
+                          <i className="fas fa-info-circle text-primary"></i>
+                          Tire Performance Analysis
+                        </CardTitle>
+                        <CardDescription>Detailed tire degradation metrics and insights</CardDescription>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3">
-                          <div className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
-                            <span className="text-sm font-medium">Compound Type:</span>
-                            <span className="text-lg font-bold text-primary">{analysisData.compound}</span>
+                          <div className="flex items-center justify-between p-3 bg-background/50 rounded-lg hover:bg-background/70 transition-colors">
+                            <span className="text-sm font-medium flex items-center gap-2">
+                              <i className="fas fa-circle text-primary"></i>
+                              Compound Type:
+                            </span>
+                            <span className={`text-lg font-bold px-3 py-1 rounded ${
+                              analysisData.compound === 'SOFT' ? 'bg-red-500/20 text-red-400' :
+                              analysisData.compound === 'MEDIUM' ? 'bg-yellow-500/20 text-yellow-400' :
+                              analysisData.compound === 'HARD' ? 'bg-gray-500/20 text-gray-300' :
+                              'bg-primary/20 text-primary'
+                            }`}>
+                              {analysisData.compound}
+                            </span>
                           </div>
-                          <div className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
-                            <span className="text-sm font-medium">Current Lap on Tires:</span>
-                            <span className="text-lg font-bold">{analysisData.tireAge}</span>
+                          <div className="flex items-center justify-between p-3 bg-background/50 rounded-lg hover:bg-background/70 transition-colors">
+                            <span className="text-sm font-medium flex items-center gap-2">
+                              <i className="fas fa-layer-group"></i>
+                              Current Lap on Tires:
+                            </span>
+                            <span className="text-lg font-bold">{analysisData.tireAge} / ~{analysisData.tireAge + (analysisData.estimatedLifeRemaining || 0)}</span>
                           </div>
-                          <div className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
-                            <span className="text-sm font-medium">Degradation per Lap:</span>
+                          <div className="flex items-center justify-between p-3 bg-background/50 rounded-lg hover:bg-background/70 transition-colors">
+                            <span className="text-sm font-medium flex items-center gap-2">
+                              <i className="fas fa-chart-line"></i>
+                              Degradation per Lap:
+                            </span>
                             <span className="text-lg font-bold text-secondary">
                               {analysisData.degradationRate > 0 ? '+' : ''}{analysisData.degradationRate.toFixed(3)}s
                             </span>
                           </div>
-                          <div className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
-                            <span className="text-sm font-medium">Performance Level:</span>
-                            <span className={`text-lg font-bold ${
-                              analysisData.performance === 'optimal' ? 'text-green-500' :
-                              analysisData.performance === 'degraded' ? 'text-yellow-500' :
-                              'text-red-500'
+                          <div className="flex items-center justify-between p-3 bg-background/50 rounded-lg hover:bg-background/70 transition-colors">
+                            <span className="text-sm font-medium flex items-center gap-2">
+                              <i className="fas fa-battery-three-quarters"></i>
+                              Performance Level:
+                            </span>
+                            <span className={`text-lg font-bold px-3 py-1 rounded ${
+                              analysisData.performance === 'optimal' ? 'bg-green-500/20 text-green-400' :
+                              analysisData.performance === 'degraded' ? 'bg-yellow-500/20 text-yellow-400' :
+                              'bg-red-500/20 text-red-400'
                             }`}>
                               {analysisData.performance.charAt(0).toUpperCase() + analysisData.performance.slice(1)}
                             </span>
+                          </div>
+                          
+                          <div className="mt-4 p-4 bg-gradient-to-r from-orange-500/10 to-red-500/10 rounded-lg border border-orange-500/20">
+                            <h4 className="font-semibold mb-3 flex items-center gap-2">
+                              <i className="fas fa-lightbulb text-yellow-400"></i>
+                              Tire Strategy Insights
+                            </h4>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex items-start gap-2">
+                                <i className="fas fa-check-circle text-green-400 mt-0.5"></i>
+                                <div>
+                                  <span className="font-medium">Estimated Life:</span> 
+                                  <span className="ml-2">{analysisData.estimatedLifeRemaining || 0} more laps before critical wear</span>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-2">
+                                <i className={`fas fa-${
+                                  (analysisData.wearLevel || 0) < 30 ? 'check-circle text-green-400' :
+                                  (analysisData.wearLevel || 0) < 60 ? 'exclamation-circle text-yellow-400' :
+                                  'times-circle text-red-400'
+                                } mt-0.5`}></i>
+                                <div>
+                                  <span className="font-medium">Current Wear:</span> 
+                                  <span className="ml-2">{(analysisData.wearLevel || 0).toFixed(1)}% - {
+                                    (analysisData.wearLevel || 0) < 30 ? 'Tires in good condition' :
+                                    (analysisData.wearLevel || 0) < 60 ? 'Moderate wear detected' :
+                                    'High wear - consider pit stop'
+                                  }</span>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-2">
+                                <i className="fas fa-temperature-high text-orange-400 mt-0.5"></i>
+                                <div>
+                                  <span className="font-medium">Temperature Effect:</span> 
+                                  <span className="ml-2">{(analysisData.tempImpact || 0).toFixed(1)}% degradation from heat</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </CardContent>
@@ -737,6 +906,7 @@ export default function AdvancedAnalysis({ sessionData, filters }: AdvancedAnaly
                             <YAxis type="category" dataKey="name" width={130} />
                             <Tooltip formatter={(value) => [`${Number(value).toFixed(1)}%`, 'Time %']} />
                             <Bar dataKey="value" radius={[0, 4, 4, 0]} />
+                            <text x="50%" y="95%" textAnchor="middle" fill="#00d9ff" opacity="0.15" fontSize="18" fontWeight="bold">CEBRIC F1</text>
                           </BarChart>
                         </ResponsiveContainer>
                       </CardContent>
