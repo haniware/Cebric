@@ -91,12 +91,12 @@ export default function Dashboard() {
                 Designed with <span className="text-primary font-semibold">FastF1</span> by Artin Zomorodian & Hani Bikdeli
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Design Group: DeepInk Team | Powered by Replit
+                Design Group: DeepInk Team
               </p>
             </div>
             <div className="flex items-center gap-5">
               <a 
-                href="https://t.me/f1analytics" 
+                href="https://t.me/CEBRICF1" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="group flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 hover:bg-[#0088cc] transition-all duration-300 hover:scale-110"
@@ -107,7 +107,7 @@ export default function Dashboard() {
                 <i className="fab fa-telegram text-xl text-white transition-colors"></i>
               </a>
               <a 
-                href="https://instagram.com/f1analytics" 
+                href="https://instagram.com/an.zomorodian" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="group flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 hover:bg-gradient-to-br hover:from-[#833AB4] hover:via-[#E1306C] hover:to-[#F77737] transition-all duration-300 hover:scale-110"
@@ -118,7 +118,7 @@ export default function Dashboard() {
                 <i className="fab fa-instagram text-xl text-muted-foreground group-hover:text-white transition-colors"></i>
               </a>
               <a 
-                href="https://discord.gg/f1analytics" 
+                href="https://discord.gg/7ft5D8N5" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="group flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 hover:bg-[#5865F2] transition-all duration-300 hover:scale-110"

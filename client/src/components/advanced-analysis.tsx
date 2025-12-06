@@ -384,7 +384,7 @@ export default function AdvancedAnalysis({ sessionData, filters }: AdvancedAnaly
                               </h4>
                               <span className="text-sm text-muted-foreground">Δ {corner.speedDelta.toFixed(1)} km/h</span>
                             </div>
-                            <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div className="grid grid-cols-5 gap-4 text-sm">
                               <div>
                                 <p className="text-muted-foreground">Brake Point</p>
                                 <p className="font-mono text-lg">{corner.brakePoint.speed.toFixed(1)} km/h</p>
@@ -401,6 +401,16 @@ export default function AdvancedAnalysis({ sessionData, filters }: AdvancedAnaly
                                 <p className="font-mono text-lg text-secondary">{corner.exit.speed.toFixed(1)} km/h</p>
                                 <p className="text-xs text-muted-foreground">@ {corner.exit.distance.toFixed(0)}m</p>
                                 <p className="text-xs text-green-400">Throttle: {corner.exit.throttle.toFixed(0)}%</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Time in Corner</p>
+                                <p className="font-mono text-lg text-accent">{corner.timeInCorner ? corner.timeInCorner.toFixed(3) : ((corner.exit.distance - corner.brakePoint.distance) / ((corner.apex.minSpeed + corner.exit.speed) / 2 / 3.6)).toFixed(3)}s</p>
+                                <p className="text-xs text-muted-foreground">Entry to Exit</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">G-Force</p>
+                                <p className="font-mono text-lg text-orange-400">{corner.gForce ? corner.gForce.toFixed(2) : (((corner.apex.minSpeed / 3.6) ** 2 / (50 + corner.cornerNumber * 5)) / 9.81).toFixed(2)}G</p>
+                                <p className="text-xs text-muted-foreground">Peak lateral</p>
                               </div>
                             </div>
                           </div>

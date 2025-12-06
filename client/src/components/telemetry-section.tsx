@@ -200,18 +200,46 @@ export default function TelemetrySection({
 
           <div>
             <label className="block text-sm font-medium text-muted-foreground mb-2">Lap 1</label>
-            <Select value={selectedLap1} onValueChange={setSelectedLap1}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select lap..." />
-              </SelectTrigger>
-              <SelectContent>
-                {lapOptions.map((lap) => (
-                  <SelectItem key={lap} value={lap.toString()}>
-                    {lap}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select value={selectedLap1} onValueChange={setSelectedLap1}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select lap..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {lapOptions.map((lap) => (
+                    <SelectItem key={lap} value={lap.toString()}>
+                      {lap}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {sessionData?.statistics.fastestLap && selectedDriver1 && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    const validLaps = sessionData.laps.filter(lap => lap.driver === selectedDriver1 && lap.lapTime > 0);
+                    if (validLaps.length === 0) {
+                      toast({
+                        title: "No valid laps",
+                        description: "No completed laps found for this driver",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    const minTime = Math.min(...validLaps.map(lap => lap.lapTime));
+                    const fastestLapData = validLaps.find(l => l.lapTime === minTime);
+                    if (fastestLapData) {
+                      setSelectedLap1(fastestLapData.lapNumber.toString());
+                    }
+                  }}
+                  title="Select fastest lap for this driver"
+                  data-testid="button-fastest-lap-1"
+                >
+                  <i className="fas fa-bolt text-yellow-500"></i>
+                </Button>
+              )}
+            </div>
           </div>
 
           <div>
@@ -233,18 +261,46 @@ export default function TelemetrySection({
 
           <div>
             <label className="block text-sm font-medium text-muted-foreground mb-2">Lap 2 (Optional)</label>
-            <Select value={selectedLap2} onValueChange={setSelectedLap2} disabled={!selectedDriver2 || selectedDriver2 === "none"}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select lap..." />
-              </SelectTrigger>
-              <SelectContent>
-                {lapOptions.map((lap) => (
-                  <SelectItem key={lap} value={lap.toString()}>
-                    {lap}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select value={selectedLap2} onValueChange={setSelectedLap2} disabled={!selectedDriver2 || selectedDriver2 === "none"}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select lap..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {lapOptions.map((lap) => (
+                    <SelectItem key={lap} value={lap.toString()}>
+                      {lap}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {sessionData?.statistics.fastestLap && selectedDriver2 && selectedDriver2 !== "none" && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    const validLaps = sessionData.laps.filter(lap => lap.driver === selectedDriver2 && lap.lapTime > 0);
+                    if (validLaps.length === 0) {
+                      toast({
+                        title: "No valid laps",
+                        description: "No completed laps found for this driver",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    const minTime = Math.min(...validLaps.map(lap => lap.lapTime));
+                    const fastestLapData = validLaps.find(l => l.lapTime === minTime);
+                    if (fastestLapData) {
+                      setSelectedLap2(fastestLapData.lapNumber.toString());
+                    }
+                  }}
+                  title="Select fastest lap for this driver"
+                  data-testid="button-fastest-lap-2"
+                >
+                  <i className="fas fa-bolt text-yellow-500"></i>
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="flex items-end">

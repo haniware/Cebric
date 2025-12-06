@@ -33,7 +33,7 @@ export default function Footer() {
                 <i className="fas fa-users text-primary text-sm"></i>
                 <span className="text-sm font-medium text-primary">DeepInk Team</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Powered by FastF1 & Replit</p>
+              <p className="text-xs text-muted-foreground mt-2">Powered by FastF1</p>
             </div>
             
             {/* Social Links Section */}
@@ -41,7 +41,7 @@ export default function Footer() {
               <p className="text-sm text-muted-foreground">Connect with us</p>
               <div className="flex items-center gap-3">
                 <a 
-                  href="https://t.me/telegram" 
+                  href="https://t.me/CEBRICF1" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="group relative flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 hover:from-[#0088cc] hover:to-[#0088cc] transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#0088cc]/50"
@@ -51,7 +51,7 @@ export default function Footer() {
                   <i className="fab fa-telegram text-2xl text-muted-foreground group-hover:text-white transition-colors"></i>
                 </a>
                 <a 
-                  href="https://www.instagram.com/instagram/" 
+                  href="https://www.instagram.com/an.zomorodian" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="group relative flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 hover:from-[#833AB4] hover:via-[#E1306C] hover:to-[#F77737] transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#E1306C]/50"
@@ -61,7 +61,7 @@ export default function Footer() {
                   <i className="fab fa-instagram text-2xl text-muted-foreground group-hover:text-white transition-colors"></i>
                 </a>
                 <a 
-                  href="https://discord.gg/f1analytics" 
+                  href="https://discord.gg/7ft5D8N5" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="group relative flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 hover:from-[#5865F2] hover:to-[#5865F2] transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#5865F2]/50"
