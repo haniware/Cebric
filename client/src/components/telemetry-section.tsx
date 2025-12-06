@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { F1SessionResponse, F1TelemetryResponse } from "@shared/schema";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, BarChart, Bar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, BarChart, Bar, LabelList, ReferenceLine } from 'recharts';
 
 interface TelemetrySectionProps {
   telemetryData: F1TelemetryResponse | null;
@@ -117,53 +117,110 @@ export default function TelemetrySection({
     return `${mins}:${secs.padStart(6, '0')}`;
   };
 
-  // Prepare data for recharts
-  const prepareChartData = (telemetry: F1TelemetryResponse['driver1']['telemetry']) => {
-    return telemetry.distance.map((dist, idx) => ({
+  // Prepare data for recharts - uses telemetry property from API response
+  const prepareChartData = (telemetry: any) => {
+    if (!telemetry?.distance) return [];
+    return telemetry.distance.map((dist: number, idx: number) => ({
       distance: Math.round(dist),
-      speed: telemetry.speed[idx] || 0,
-      throttle: telemetry.throttle[idx] || 0,
-      brake: telemetry.brake[idx] || 0,
-      gear: telemetry.gear[idx] || 0,
-      // Add other telemetry data as needed
+      speed: telemetry.speed?.[idx] || 0,
+      throttle: telemetry.throttle?.[idx] || 0,
+      brake: Math.min((telemetry.brake?.[idx] || 0), 100),
+      drs: telemetry.drs?.[idx] || 0,
+      gear: telemetry.gear?.[idx] || 0,
     }));
   };
 
-  const driver1ChartData = telemetryData ? prepareChartData(telemetryData.driver1.telemetry) : [];
-  const driver2ChartData = telemetryData?.driver2 ? prepareChartData(telemetryData.driver2.telemetry) : [];
+  // Access telemetry data - try both 'telemetry' (zod schema) and 'data' (TypeScript type) for compatibility
+  const getDriverTelemetry = (driver: any) => driver?.telemetry || driver?.data;
+  
+  const driver1ChartData = telemetryData ? prepareChartData(getDriverTelemetry(telemetryData.driver1)) : [];
+  const driver2ChartData = telemetryData?.driver2 ? prepareChartData(getDriverTelemetry(telemetryData.driver2)) : [];
 
-  const combinedSpeedData = driver1ChartData.map((d1, idx) => {
+  const combinedSpeedData = telemetryData ? driver1ChartData.map((d1: any, idx: number) => {
     const d2 = driver2ChartData[idx];
     return {
       distance: d1.distance,
       [`${telemetryData.driver1.driver}_speed`]: d1.speed,
-      ...(d2 && { [`${telemetryData.driver2.driver}_speed`]: d2.speed }),
+      ...(d2 && telemetryData.driver2 && { [`${telemetryData.driver2.driver}_speed`]: d2.speed }),
     };
-  });
+  }) : [];
 
-  const combinedThrottleBrakeData = driver1ChartData.map((d1, idx) => {
+  const combinedThrottleBrakeData = telemetryData ? driver1ChartData.map((d1: any, idx: number) => {
     const d2 = driver2ChartData[idx];
+    const maxBrake1 = Math.max(...driver1ChartData.map((d: any) => d.brake), 1);
+    const maxBrake2 = driver2ChartData.length > 0 ? Math.max(...driver2ChartData.map((d: any) => d.brake), 1) : 1;
     return {
       distance: d1.distance,
       [`${telemetryData.driver1.driver}_throttle`]: d1.throttle,
-      [`${telemetryData.driver1.driver}_brake`]: d1.brake,
-      ...(d2 && {
+      [`${telemetryData.driver1.driver}_brake`]: (d1.brake / maxBrake1) * 100,
+      ...(d2 && telemetryData.driver2 && {
         [`${telemetryData.driver2.driver}_throttle`]: d2.throttle,
-        [`${telemetryData.driver2.driver}_brake`]: d2.brake,
+        [`${telemetryData.driver2.driver}_brake`]: (d2.brake / maxBrake2) * 100,
       }),
     };
-  });
+  }) : [];
   
   const driver1Color = "#3b82f6"; // blue
   const driver2Color = "#ef4444"; // red
   
-  // Prepare gear data only when telemetry is available
-  const combinedGearData = telemetryData ? driver1ChartData.map((d1, idx) => {
+  // Calculate cumulative time delta between drivers (based on distance and speed)
+  const calculateTimeDelta = () => {
+    if (!telemetryData || !telemetryData.driver2 || driver1ChartData.length === 0 || driver2ChartData.length === 0) return [];
+    
+    // Use the shorter array length to avoid index out of bounds
+    const minLength = Math.min(driver1ChartData.length, driver2ChartData.length);
+    let cumulativeDelta = 0;
+    
+    const result = [];
+    for (let idx = 0; idx < minLength; idx++) {
+      const d1 = driver1ChartData[idx];
+      const d2 = driver2ChartData[idx];
+      
+      if (idx === 0 || !d1 || !d2) {
+        result.push({ distance: d1?.distance || 0, delta: 0 });
+        continue;
+      }
+      
+      const prevD1 = driver1ChartData[idx - 1];
+      const prevD2 = driver2ChartData[idx - 1];
+      const distDiff = d1.distance - prevD1.distance;
+      
+      if (distDiff > 0 && d1.speed > 0 && d2.speed > 0) {
+        const time1 = distDiff / (d1.speed / 3.6);
+        const time2 = distDiff / (d2.speed / 3.6);
+        cumulativeDelta += (time2 - time1);
+      }
+      
+      result.push({
+        distance: d1.distance,
+        delta: cumulativeDelta,
+      });
+    }
+    return result;
+  };
+  
+  const timeDeltaData = calculateTimeDelta();
+  
+  // Gear data - uses actual gear from telemetry if available, falls back to speed estimation
+  const combinedGearData = telemetryData ? driver1ChartData.map((d1: any, idx: number) => {
     const d2 = driver2ChartData[idx];
+    // Fallback: estimate gear from speed if not in data
+    const estimateGear = (speed: number) => {
+      if (speed < 60) return 1;
+      if (speed < 100) return 2;
+      if (speed < 140) return 3;
+      if (speed < 180) return 4;
+      if (speed < 220) return 5;
+      if (speed < 270) return 6;
+      if (speed < 310) return 7;
+      return 8;
+    };
     return {
       distance: d1.distance,
-      [`${telemetryData.driver1.driver}_gear`]: d1.gear,
-      ...(d2 && telemetryData.driver2 && { [`${telemetryData.driver2.driver}_gear`]: d2.gear }),
+      [`${telemetryData.driver1.driver}_gear`]: d1.gear || estimateGear(d1.speed),
+      ...(d2 && telemetryData.driver2 && {
+        [`${telemetryData.driver2.driver}_gear`]: d2.gear || estimateGear(d2.speed),
+      }),
     };
   }) : [];
 
@@ -438,42 +495,14 @@ export default function TelemetrySection({
                       <span className="font-semibold" style={{ color: driver1Color }}>
                         {telemetryData.driver1.driver}:
                       </span>{" "}
-                      {telemetryData.driver1.metrics.drsUsage.toFixed(1)}%
+                      {telemetryData.driver1.metrics.drs.toFixed(1)}%
                     </div>
                     {telemetryData.driver2 && (
                       <div>
                         <span className="font-semibold" style={{ color: driver2Color }}>
                           {telemetryData.driver2.driver}:
                         </span>{" "}
-                        {telemetryData.driver2.metrics.drsUsage.toFixed(1)}%
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Tire Compound</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div>
-                      <span className="font-semibold" style={{ color: driver1Color }}>
-                        {telemetryData.driver1.driver}:
-                      </span>{" "}
-                      <span className="uppercase font-mono text-xs px-2 py-1 bg-primary/10 rounded">
-                        {telemetryData.driver1.telemetry.compound || 'UNKNOWN'}
-                      </span>
-                    </div>
-                    {telemetryData.driver2 && (
-                      <div>
-                        <span className="font-semibold" style={{ color: driver2Color }}>
-                          {telemetryData.driver2.driver}:
-                        </span>{" "}
-                        <span className="uppercase font-mono text-xs px-2 py-1 bg-secondary/10 rounded">
-                          {telemetryData.driver2.telemetry.compound || 'UNKNOWN'}
-                        </span>
+                        {telemetryData.driver2.metrics.drs.toFixed(1)}%
                       </div>
                     )}
                   </div>
@@ -493,7 +522,7 @@ export default function TelemetrySection({
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="distance" label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }} />
                     <YAxis label={{ value: 'Speed (km/h)', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip formatter={(value, name) => [value.toFixed(1) + ' km/h', name]}/>
+                    <Tooltip formatter={(value, name) => [Number(value).toFixed(1) + ' km/h', name]}/>
                     <Legend />
                     <Area 
                       type="monotone" 
@@ -530,7 +559,7 @@ export default function TelemetrySection({
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="distance" label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }} />
                     <YAxis label={{ value: 'Input %', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip formatter={(value, name) => [value.toFixed(1) + '%', name]}/>
+                    <Tooltip formatter={(value, name) => [Number(value).toFixed(1) + '%', name]}/>
                     <Legend />
                     <Line 
                       type="monotone" 
@@ -642,11 +671,15 @@ export default function TelemetrySection({
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="sector" />
                     <YAxis label={{ value: 'Time (s)', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip formatter={(value, name) => [formatTimeForTooltip(value), name]}/>
+                    <Tooltip formatter={(value, name) => [formatTimeForTooltip(Number(value)), name]}/>
                     <Legend />
-                    <Bar dataKey={telemetryData.driver1.driver} fill={driver1Color} />
+                    <Bar dataKey={telemetryData.driver1.driver} fill={driver1Color}>
+                      <LabelList dataKey={telemetryData.driver1.driver} position="top" formatter={(value: number) => value ? value.toFixed(3) + 's' : ''} fill="#fff" fontSize={10} />
+                    </Bar>
                     {telemetryData.driver2 && (
-                      <Bar dataKey={telemetryData.driver2.driver} fill={driver2Color} />
+                      <Bar dataKey={telemetryData.driver2.driver} fill={driver2Color}>
+                        <LabelList dataKey={telemetryData.driver2.driver} position="top" formatter={(value: number) => value ? value.toFixed(3) + 's' : ''} fill="#fff" fontSize={10} />
+                      </Bar>
                     )}
                   </BarChart>
                 </ResponsiveContainer>
@@ -695,6 +728,45 @@ export default function TelemetrySection({
                       <text x="50%" y="20" textAnchor="middle" className="text-sm text-muted-foreground">
                         Positive = {telemetryData.driver1.driver} faster
                       </text>
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Time Delta Chart (only when comparing two drivers) */}
+            {telemetryData.driver2 && timeDeltaData.length > 0 && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>Time Delta Analysis</CardTitle>
+                  <CardDescription>
+                    Cumulative time difference - Positive = {telemetryData.driver1.driver} ahead
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={timeDeltaData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="distance" label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }} />
+                      <YAxis label={{ value: 'Time Delta (s)', angle: -90, position: 'insideLeft' }} />
+                      <Tooltip formatter={(value) => [`${Number(value).toFixed(3)}s`, 'Delta']} />
+                      <Legend />
+                      <ReferenceLine y={0} stroke="#666" strokeDasharray="3 3" />
+                      <defs>
+                        <linearGradient id="timeDeltaGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#10b981" stopOpacity={0.8}/>
+                          <stop offset="50%" stopColor="#eab308" stopOpacity={0.3}/>
+                          <stop offset="100%" stopColor="#ef4444" stopOpacity={0.8}/>
+                        </linearGradient>
+                      </defs>
+                      <Area 
+                        type="monotone" 
+                        dataKey="delta" 
+                        stroke="#8b5cf6" 
+                        fill="url(#timeDeltaGradient)"
+                        fillOpacity={0.6}
+                        name={`${telemetryData.driver1.driver} vs ${telemetryData.driver2.driver}`}
+                      />
                     </AreaChart>
                   </ResponsiveContainer>
                 </CardContent>

@@ -302,16 +302,44 @@ export default function AdvancedAnalysis({ sessionData, filters }: AdvancedAnaly
 
               <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-2">Lap</label>
-                <Select value={selectedLap} onValueChange={setSelectedLap}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select lap..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lapOptions.map((lap) => (
-                      <SelectItem key={lap} value={lap.toString()}>{lap}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select value={selectedLap} onValueChange={setSelectedLap}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select lap..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {lapOptions.map((lap) => (
+                        <SelectItem key={lap} value={lap.toString()}>{lap}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {sessionData?.statistics.fastestLap && selectedDriver && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        const validLaps = sessionData.laps.filter(lap => lap.driver === selectedDriver && lap.lapTime > 0);
+                        if (validLaps.length === 0) {
+                          toast({
+                            title: "No valid laps",
+                            description: "No completed laps found for this driver",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        const minTime = Math.min(...validLaps.map(lap => lap.lapTime));
+                        const fastestLapData = validLaps.find(l => l.lapTime === minTime);
+                        if (fastestLapData) {
+                          setSelectedLap(fastestLapData.lapNumber.toString());
+                        }
+                      }}
+                      title="Select fastest lap for this driver"
+                      data-testid="button-fastest-lap-analysis"
+                    >
+                      <i className="fas fa-bolt text-yellow-500"></i>
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-end md:col-span-2">
@@ -683,6 +711,34 @@ export default function AdvancedAnalysis({ sessionData, filters }: AdvancedAnaly
                             </div>
                           </div>
                         </div>
+                      </CardContent>
+                    </Card>
+                    
+                    {/* Energy Usage Visualization */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Throttle Distribution</CardTitle>
+                        <CardDescription>Breakdown of throttle application during lap</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart data={(() => {
+                            const fullThrottle = analysisData.fullThrottlePct || 0;
+                            const liftCoast = analysisData.liftAndCoastPct || 0;
+                            const partialThrottle = Math.max(0, 100 - fullThrottle - liftCoast);
+                            return [
+                              { name: 'Full Throttle (>95%)', value: fullThrottle, fill: '#22c55e' },
+                              { name: 'Partial Throttle', value: partialThrottle, fill: '#3b82f6' },
+                              { name: 'Lift & Coast (<20%)', value: liftCoast, fill: '#f59e0b' },
+                            ];
+                          })()} layout="vertical">
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                            <YAxis type="category" dataKey="name" width={130} />
+                            <Tooltip formatter={(value) => [`${Number(value).toFixed(1)}%`, 'Time %']} />
+                            <Bar dataKey="value" radius={[0, 4, 4, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
                       </CardContent>
                     </Card>
                   </div>
