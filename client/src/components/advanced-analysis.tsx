@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { F1SessionResponse } from "@shared/schema";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, ReferenceLine } from 'recharts';
 
 interface AdvancedAnalysisProps {
   sessionData: F1SessionResponse | null;
@@ -260,7 +260,6 @@ export default function AdvancedAnalysis({ sessionData, filters }: AdvancedAnaly
                       <Legend />
                       <Bar dataKey="bestLap" fill="#00d9ff" name="Best Lap" />
                       <Bar dataKey="avgLap" fill="#ff3853" name="Avg Lap" />
-                      <text x="50%" y="95%" textAnchor="middle" fill="#00d9ff" opacity="0.15" fontSize="20" fontWeight="bold">CEBRIC F1</text>
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -615,32 +614,104 @@ export default function AdvancedAnalysis({ sessionData, filters }: AdvancedAnaly
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <i className="fas fa-chart-area text-primary"></i>
-                          Tire Wear Progression
+                          Tire Wear Progression & Performance
                         </CardTitle>
-                        <CardDescription>Estimated wear development over tire life</CardDescription>
+                        <CardDescription>Estimated wear development and performance degradation over tire life</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <ResponsiveContainer width="100%" height={250}>
+                        <ResponsiveContainer width="100%" height={300}>
                           <LineChart data={(() => {
-                            const maxLife = 40;
+                            const maxLife = Math.max(40, (analysisData.tireAge || 0) + (analysisData.estimatedLifeRemaining || 10));
                             const currentAge = analysisData.tireAge || 0;
-                            const degradationRate = analysisData.degradationRate || 0;
-                            return Array.from({ length: maxLife + 1 }, (_, i) => ({
-                              lap: i,
-                              wear: Math.min(100, (i / maxLife) * 100 + (degradationRate * i * 50)),
-                              performance: Math.max(0, 100 - ((i / maxLife) * 100 + (degradationRate * i * 50))),
-                              current: i === currentAge
-                            }));
+                            const degradationRate = Math.abs(analysisData.degradationRate || 0);
+                            const baseWearRate = 2.5;
+                            
+                            return Array.from({ length: maxLife + 1 }, (_, i) => {
+                              const naturalWear = (i / maxLife) * 100;
+                              const degradationImpact = degradationRate * i * 30;
+                              const totalWear = Math.min(100, naturalWear + degradationImpact);
+                              const performanceLoss = Math.pow(totalWear / 100, 1.5) * 100;
+                              
+                              return {
+                                lap: i,
+                                wear: totalWear,
+                                performance: Math.max(0, 100 - performanceLoss),
+                                gripLevel: Math.max(0, 100 - (totalWear * 0.8)),
+                                current: i === currentAge
+                              };
+                            });
                           })()}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="lap" label={{ value: 'Lap on Tire', position: 'insideBottom', offset: -5 }} />
-                            <YAxis label={{ value: 'Percentage (%)', angle: -90, position: 'insideLeft' }} />
-                            <Tooltip formatter={(value) => `${Number(value).toFixed(1)}%`} />
+                            <defs>
+                              <linearGradient id="wearGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#ef4444" stopOpacity={0.8}/>
+                                <stop offset="100%" stopColor="#ef4444" stopOpacity={0.2}/>
+                              </linearGradient>
+                              <linearGradient id="performanceGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#22c55e" stopOpacity={0.8}/>
+                                <stop offset="100%" stopColor="#22c55e" stopOpacity={0.2}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                            <XAxis 
+                              dataKey="lap" 
+                              label={{ value: 'Laps on Tire Set', position: 'insideBottom', offset: -5 }}
+                              stroke="#888"
+                            />
+                            <YAxis 
+                              label={{ value: 'Percentage (%)', angle: -90, position: 'insideLeft' }}
+                              stroke="#888"
+                            />
+                            <Tooltip 
+                              formatter={(value: any) => `${Number(value).toFixed(1)}%`}
+                              contentStyle={{ backgroundColor: 'rgba(18, 18, 20, 0.95)', border: '1px solid #00d9ff' }}
+                            />
                             <Legend />
-                            <Line type="monotone" dataKey="wear" stroke="#ef4444" strokeWidth={2} name="Tire Wear" dot={false} />
-                            <Line type="monotone" dataKey="performance" stroke="#22c55e" strokeWidth={2} name="Performance" dot={false} />
-                            <ReferenceLine x={analysisData.tireAge} stroke="#00d9ff" strokeDasharray="3 3" label="Current" />
-                            <text x="50%" y="95%" textAnchor="middle" fill="#00d9ff" opacity="0.15" fontSize="20" fontWeight="bold">CEBRIC F1</text>
+                            <Line 
+                              type="monotone" 
+                              dataKey="wear" 
+                              stroke="#ef4444" 
+                              strokeWidth={3} 
+                              name="Tire Wear" 
+                              dot={false}
+                              fill="url(#wearGradient)"
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="performance" 
+                              stroke="#22c55e" 
+                              strokeWidth={3} 
+                              name="Performance Remaining" 
+                              dot={false}
+                              fill="url(#performanceGradient)"
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="gripLevel" 
+                              stroke="#f59e0b" 
+                              strokeWidth={2} 
+                              strokeDasharray="5 5"
+                              name="Grip Level" 
+                              dot={false}
+                            />
+                            <ReferenceLine 
+                              x={analysisData.tireAge} 
+                              stroke="#00d9ff" 
+                              strokeWidth={2}
+                              strokeDasharray="3 3" 
+                              label={{ value: 'Current Lap', position: 'top', fill: '#00d9ff', fontWeight: 'bold' }}
+                            />
+                            <ReferenceLine 
+                              y={60} 
+                              stroke="#fbbf24" 
+                              strokeDasharray="3 3" 
+                              label={{ value: 'Warning Threshold', position: 'right', fill: '#fbbf24', fontSize: 12 }}
+                            />
+                            <ReferenceLine 
+                              y={30} 
+                              stroke="#ef4444" 
+                              strokeDasharray="3 3" 
+                              label={{ value: 'Critical Threshold', position: 'right', fill: '#ef4444', fontSize: 12 }}
+                            />
                           </LineChart>
                         </ResponsiveContainer>
                       </CardContent>
@@ -906,7 +977,6 @@ export default function AdvancedAnalysis({ sessionData, filters }: AdvancedAnaly
                             <YAxis type="category" dataKey="name" width={130} />
                             <Tooltip formatter={(value) => [`${Number(value).toFixed(1)}%`, 'Time %']} />
                             <Bar dataKey="value" radius={[0, 4, 4, 0]} />
-                            <text x="50%" y="95%" textAnchor="middle" fill="#00d9ff" opacity="0.15" fontSize="18" fontWeight="bold">CEBRIC F1</text>
                           </BarChart>
                         </ResponsiveContainer>
                       </CardContent>
