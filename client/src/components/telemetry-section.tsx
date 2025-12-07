@@ -543,8 +543,7 @@ export default function TelemetrySection({
                         name={`${telemetryData.driver2.driver} Speed`}
                       />
                     )}
-                    <text x="50%" y="95%" textAnchor="middle" fill="#00d9ff" opacity="0.15" fontSize="24" fontWeight="bold">CEBRIC F1</text>
-                  </AreaChart>
+                    </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
@@ -727,7 +726,6 @@ export default function TelemetrySection({
                         fillOpacity={0.6}
                         name="Speed Delta"
                       />
-                      <text x="50%" y="95%" textAnchor="middle" fill="#00d9ff" opacity="0.15" fontSize="24" fontWeight="bold">CEBRIC F1</text>
                     </AreaChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -767,7 +765,6 @@ export default function TelemetrySection({
                         fillOpacity={0.6}
                         name="Speed Delta"
                       />
-                      <text x="50%" y="95%" textAnchor="middle" fill="#00d9ff" opacity="0.15" fontSize="24" fontWeight="bold">CEBRIC F1</text>
                     </AreaChart>
                   </ResponsiveContainer>
                 </CardContent>

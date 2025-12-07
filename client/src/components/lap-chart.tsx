@@ -122,8 +122,11 @@ export default function LapChart({ sessionData, onLapSelect }: LapChartProps) {
               borderWidth: 1,
               callbacks: {
                 label: function(context: any) {
+                  if (!context || !context.parsed || typeof context.parsed.y !== 'number') {
+                    return '';
+                  }
                   const time = context.parsed.y.toFixed(3);
-                  const label = context.dataset.label || '';
+                  const label = context.dataset?.label ? String(context.dataset.label) : '';
                   return `${label}: ${time}s`;
                 }
               }
@@ -186,25 +189,6 @@ export default function LapChart({ sessionData, onLapSelect }: LapChartProps) {
       });
 
       chartInstanceRef.current = newChart;
-
-      // Add watermark
-      const watermarkPlugin = {
-        id: 'watermark',
-        afterDraw: (chart: any) => {
-          const ctx = chart.ctx;
-          ctx.save();
-          ctx.globalAlpha = 0.15;
-          ctx.fillStyle = '#00d9ff';
-          ctx.font = 'bold 24px Arial';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'bottom';
-          ctx.fillText('CEBRIC F1', chart.width / 2, chart.height - 5);
-          ctx.restore();
-        }
-      };
-      
-      newChart.options.plugins = newChart.options.plugins || [];
-      Chart.register(watermarkPlugin);
     });
 
     return () => {
