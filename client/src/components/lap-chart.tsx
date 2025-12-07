@@ -123,7 +123,8 @@ export default function LapChart({ sessionData, onLapSelect }: LapChartProps) {
               callbacks: {
                 label: function(context: any) {
                   const time = context.parsed.y.toFixed(3);
-                  return `${context.dataset.label}: ${time}s`;
+                  const label = context.dataset.label || '';
+                  return `${label}: ${time}s`;
                 }
               }
             }
