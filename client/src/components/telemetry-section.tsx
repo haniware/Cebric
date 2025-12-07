@@ -522,7 +522,7 @@ export default function TelemetrySection({
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="distance" label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }} />
                     <YAxis label={{ value: 'Speed (km/h)', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip formatter={(value, name) => [Number(value).toFixed(1) + ' km/h', name]}/>
+                    <Tooltip formatter={(value, name) => [Number(value).toFixed(1) + ' km/h', String(name || '')]}/>
                     <Legend />
                     <Area 
                       type="monotone" 
@@ -561,7 +561,7 @@ export default function TelemetrySection({
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="distance" label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }} />
                     <YAxis label={{ value: 'Input %', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip formatter={(value, name) => [Number(value).toFixed(1) + '%', name]}/>
+                    <Tooltip formatter={(value, name) => [Number(value).toFixed(1) + '%', String(name || '')]}/>
                     <Legend />
                     <Line 
                       type="monotone" 
@@ -614,7 +614,7 @@ export default function TelemetrySection({
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="distance" label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }} />
                     <YAxis domain={[0, 8]} label={{ value: 'Gear', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip formatter={(value, name) => [value, name]}/>
+                    <Tooltip formatter={(value, name) => [value, String(name || '')]}/>
                     <Legend />
                     <Line 
                       type="stepAfter" 
@@ -710,7 +710,7 @@ export default function TelemetrySection({
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="distance" label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }} />
                       <YAxis label={{ value: 'Speed Delta (km/h)', angle: -90, position: 'insideLeft' }} />
-                      <Tooltip formatter={(value) => [`${Number(value).toFixed(1)} km/h`, 'Delta']} />
+                      <Tooltip formatter={(value, name) => [`${Number(value).toFixed(1)} km/h`, String(name || 'Delta')]} />
                       <Legend />
                       <defs>
                         <linearGradient id="deltaGradient" x1="0" y1="0" x2="0" y2="1">
@@ -749,7 +749,7 @@ export default function TelemetrySection({
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="distance" label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }} />
                       <YAxis label={{ value: 'Time Delta (s)', angle: -90, position: 'insideLeft' }} />
-                      <Tooltip formatter={(value) => [`${Number(value).toFixed(3)}s`, 'Delta']} />
+                      <Tooltip formatter={(value, name) => [`${Number(value).toFixed(3)}s`, String(name || 'Delta')]} />
                       <Legend />
                       <ReferenceLine y={0} stroke="#666" strokeDasharray="3 3" />
                       <defs>
@@ -803,7 +803,7 @@ export default function TelemetrySection({
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="distance" label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }} />
                     <YAxis label={{ value: 'Cornering Index', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip formatter={(value) => [`${Number(value).toFixed(1)}`, 'Index']} />
+                    <Tooltip formatter={(value, name) => [`${Number(value).toFixed(1)}`, String(name || 'Index')]} />
                     <Legend />
                     <Area 
                       type="monotone" 
